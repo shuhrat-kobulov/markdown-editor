@@ -1,0 +1,16 @@
+.editor-pane {
+    flex: 1;
+    min-width: 0;
+    overflow: auto;
+    /* match the oneDark theme background so the whole pane is dark */
+    background: #282c34;
+}
+
+/* make CodeMirror fill the full height of its pane */
+.editor-pane .cm-editor {
+    height: 100%;
+}
+
+.editor-pane .cm-scroller {
+    overflow: auto;
+}
