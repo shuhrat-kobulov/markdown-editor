@@ -1,39 +1,82 @@
-import './editor.css';
-
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
+
+export interface EditorHandle {
+    insert: (before: string, after?: string) => void;
+}
 
 interface EditorProps {
     value: string;
     onChange: (value: string) => void;
 }
 
-export default function Editor({ value, onChange }: EditorProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const viewRef = useRef<EditorView | null>(null);
+const Editor = forwardRef<EditorHandle, EditorProps>(
+    ({ value, onChange }, ref) => {
+        const containerRef = useRef<HTMLDivElement>(null);
+        const viewRef = useRef<EditorView | null>(null);
 
-    useEffect(() => {
-        if (!containerRef.current) return;
+        useImperativeHandle(ref, () => ({
+            insert(before: string, after: string = '') {
+                const view = viewRef.current;
+                if (!view) return;
 
-        viewRef.current = new EditorView({
-            doc: value,
-            extensions: [
-                basicSetup,
-                markdown(),
-                oneDark,
-                EditorView.updateListener.of((update) => {
-                    if (update.docChanged) {
-                        onChange(update.state.doc.toString());
-                    }
-                }),
-            ],
-            parent: containerRef.current,
-        });
+                const { from, to } = view.state.selection.main;
+                const selectedText = view.state.sliceDoc(from, to);
 
-        return () => viewRef.current?.destroy();
-    }, []);
+                view.dispatch({
+                    changes: {
+                        from,
+                        to,
+                        insert: `${before}${selectedText}${after}`,
+                    },
+                    selection: {
+                        anchor:
+                            from +
+                            before.length +
+                            selectedText.length +
+                            after.length,
+                    },
+                });
 
-    return <div ref={containerRef} className="editor-pane" />;
-}
+                view.focus();
+            },
+        }));
+
+        useEffect(() => {
+            if (!containerRef.current) return;
+
+            viewRef.current = new EditorView({
+                doc: value,
+                extensions: [
+                    basicSetup,
+                    markdown(),
+                    oneDark,
+                    EditorView.theme({
+                        '&': { height: '100%' },
+                        '.cm-scroller': { overflow: 'auto' },
+                    }),
+                    EditorView.updateListener.of((update) => {
+                        if (update.docChanged) {
+                            onChange(update.state.doc.toString());
+                        }
+                    }),
+                ],
+                parent: containerRef.current,
+            });
+
+            return () => viewRef.current?.destroy();
+        }, []);
+
+        return (
+            <div
+                ref={containerRef}
+                style={{ flex: 1, overflow: 'auto', height: '100%' }}
+            />
+        );
+    },
+);
+
+Editor.displayName = 'Editor';
+export default Editor;

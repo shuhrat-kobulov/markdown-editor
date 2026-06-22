@@ -12,6 +12,12 @@ body {
     height: 100%;
 }
 
+.app-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 .app-container {
     height: 100%;
     display: flex;
